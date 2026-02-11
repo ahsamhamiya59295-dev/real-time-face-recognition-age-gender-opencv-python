@@ -1,0 +1,13 @@
+# Ignore dataset (private images)
+dataset/
+
+# Ignore trained face recognizer file only
+models/face_recognizer.yml
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+.env
