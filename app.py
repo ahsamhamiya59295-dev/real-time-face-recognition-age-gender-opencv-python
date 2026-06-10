@@ -4,11 +4,62 @@ import numpy as np
 from PIL import Image
 import os
 
-# ---------------- UI ----------------
-st.set_page_config(page_title="AI Face Age Gender", layout="centered")
-st.title("🤖 AI Face + Age + Gender Detection")
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(
+    page_title="Face AI Pro",
+    page_icon="🤖",
+    layout="centered"
+)
 
-st.write("Capture an image and the AI will detect faces, age, and gender.")
+# ---------------- CUSTOM CSS (STUNNING UI) ----------------
+st.markdown("""
+<style>
+    .main {
+        background-color: #0e1117;
+    }
+
+    h1 {
+        text-align: center;
+        color: #00ffe1;
+        font-size: 42px;
+        font-weight: 800;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #9aa4b2;
+        font-size: 16px;
+        margin-bottom: 25px;
+    }
+
+    .box {
+        background: linear-gradient(145deg, #111827, #0b1220);
+        padding: 20px;
+        border-radius: 15px;
+        border: 1px solid #1f2937;
+        box-shadow: 0 0 20px rgba(0,255,225,0.15);
+    }
+
+    .result {
+        font-size: 20px;
+        font-weight: bold;
+        color: #00ff9d;
+        text-align: center;
+        margin-top: 10px;
+    }
+
+    .footer {
+        text-align: center;
+        color: #6b7280;
+        font-size: 12px;
+        margin-top: 20px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- TITLE ----------------
+st.markdown("<h1>🤖 Face AI Pro System</h1>", unsafe_allow_html=True)
+st.markdown("<p class='subtitle'>AI detects Face • Age • Gender in real time</p>", unsafe_allow_html=True)
 
 # ---------------- PATH SETUP ----------------
 BASE_DIR = os.path.dirname(__file__)
@@ -35,18 +86,21 @@ AGE_LIST = ['(0-2)', '(4-6)', '(8-12)', '(15-20)',
 
 GENDER_LIST = ['Male', 'Female']
 
-# ---------------- CAMERA INPUT ----------------
+# ---------------- UI CARD ----------------
+st.markdown("<div class='box'>", unsafe_allow_html=True)
+
 img_file = st.camera_input("📸 Capture Image")
 
+st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- PROCESSING ----------------
 if img_file is not None:
 
-    # Convert image
     image = Image.open(img_file)
     frame = np.array(image)
 
     gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
-    # Detect faces
     faces = face_cascade.detectMultiScale(gray, 1.1, 5)
 
     for (x, y, w, h) in faces:
@@ -60,11 +114,9 @@ if img_file is not None:
                 swapRB=False
             )
 
-            # Gender prediction
             gender_net.setInput(blob)
             gender = GENDER_LIST[gender_net.forward().argmax()]
 
-            # Age prediction
             age_net.setInput(blob)
             age = AGE_LIST[age_net.forward().argmax()]
 
@@ -73,11 +125,17 @@ if img_file is not None:
         except:
             label = "Unknown"
 
-        # Draw box + label
         cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
         cv2.putText(frame, label, (x, y-10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8,
                     (0, 255, 0), 2)
 
-    st.image(frame, channels="RGB")
-    st.success(f"Faces detected: {len(faces)}")
+    st.image(frame, use_container_width=True)
+
+    st.markdown(
+        f"<p class='result'>Faces detected: {len(faces)}</p>",
+        unsafe_allow_html=True
+    )
+
+# ---------------- FOOTER ----------------
+st.markdown("<p class='footer'>Powered by AI • Streamlit • OpenCV</p>", unsafe_allow_html=True)
