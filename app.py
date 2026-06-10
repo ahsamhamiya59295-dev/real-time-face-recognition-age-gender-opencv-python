@@ -6,7 +6,7 @@ import os
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
-    page_title="Neon Face AI",
+    page_title="FaceInsight AI",
     layout="centered",
     page_icon="🤖"
 )
@@ -76,8 +76,8 @@ h1 {
 """, unsafe_allow_html=True)
 
 # ---------------- TITLE ----------------
-st.markdown("<h1>🤖 NEON FACE AI</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subtitle'>Face • Age • Gender Detection (Neon Blue & Green AI System)</p>", unsafe_allow_html=True)
+st.markdown("<h1>🤖 FaceInsight AI</h1>", unsafe_allow_html=True)
+st.markdown("<p class='subtitle'>Face • Age • Gender Detection </p>", unsafe_allow_html=True)
 
 # ---------------- MODEL PATH ----------------
 BASE_DIR = os.path.dirname(__file__)
@@ -106,7 +106,7 @@ GENDER_LIST = ['Male', 'Female']
 # ---------------- UI BOX ----------------
 st.markdown("<div class='box'>", unsafe_allow_html=True)
 
-img_file = st.camera_input("📸 Capture Face Image")
+img_file = st.camera_input("Logging Face Image")
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -155,4 +155,4 @@ if img_file is not None:
     st.markdown(f"<p class='result'>👤 Faces: {len(faces)} | {gender_out} | {age_out}</p>", unsafe_allow_html=True)
 
 # ---------------- FOOTER ----------------
-st.markdown("<p style='text-align:center;color:#00e5ff;'>⚡ Powered by Neon AI • Streamlit • OpenCV</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:#00e5ff;'>⚡ Powered by AHSAM KARIM </p>", unsafe_allow_html=True)
