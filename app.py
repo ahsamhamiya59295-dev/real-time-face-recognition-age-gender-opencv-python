@@ -1,40 +1,32 @@
 import streamlit as st
 import cv2
 import numpy as np
-from PIL import Image
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 
-# Load OpenCV models (UPDATE PATHS if needed)
+# Load face detector
 face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
 
-st.title("Real-Time Face Detection (Streamlit Cloud)")
+st.title("Live Face Detection (Streamlit Cloud)")
 
-st.write("Take a picture using your camera below 👇")
+# 👇 Video processing class
+class FaceDetector(VideoTransformerBase):
+    def transform(self, frame):
+        img = frame.to_ndarray(format="bgr24")
 
-# 📸 Camera input (WORKS ON STREAMLIT CLOUD)
-img_file = st.camera_input("Capture Image")
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-if img_file is not None:
-    # Convert image to OpenCV format
-    image = Image.open(img_file)
-    image = np.array(image)
+        faces = face_cascade.detectMultiScale(gray, 1.1, 5)
 
-    # Convert RGB → BGR
-    frame = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        for (x, y, w, h) in faces:
+            cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-    # Convert to grayscale
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        return img
 
-    # Detect faces
-    faces = face_cascade.detectMultiScale(gray, 1.1, 5)
-
-    # Draw rectangles
-    for (x, y, w, h) in faces:
-        cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
-
-    # Convert back to RGB for Streamlit display
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-    st.image(frame, channels="RGB")
-    st.success(f"Faces detected: {len(faces)}")
+# 🚀 LIVE CAMERA STREAM
+webrtc_streamer(
+    key="face-detection",
+    video_transformer_factory=FaceDetector,
+    media_stream_constraints={"video": True, "audio": False},
+)
