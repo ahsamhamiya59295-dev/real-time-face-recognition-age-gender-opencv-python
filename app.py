@@ -2,9 +2,17 @@ import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image
+import os
 
 # ---------------- UI ----------------
+st.set_page_config(page_title="AI Face Age Gender", layout="centered")
 st.title("🤖 AI Face + Age + Gender Detection")
+
+st.write("Capture an image and the AI will detect faces, age, and gender.")
+
+# ---------------- PATH SETUP ----------------
+BASE_DIR = os.path.dirname(__file__)
+MODEL_DIR = os.path.join(BASE_DIR, "models")
 
 # ---------------- LOAD MODELS ----------------
 face_cascade = cv2.CascadeClassifier(
@@ -12,29 +20,33 @@ face_cascade = cv2.CascadeClassifier(
 )
 
 age_net = cv2.dnn.readNetFromCaffe(
-    "age_deploy.prototxt",
-    "age_net.caffemodel"
+    os.path.join(MODEL_DIR, "age_deploy.prototxt"),
+    os.path.join(MODEL_DIR, "age_net.caffemodel")
 )
 
 gender_net = cv2.dnn.readNetFromCaffe(
-    "gender_deploy.prototxt",
-    "gender_net.caffemodel"
+    os.path.join(MODEL_DIR, "gender_deploy.prototxt"),
+    os.path.join(MODEL_DIR, "gender_net.caffemodel")
 )
 
+# ---------------- LABELS ----------------
 AGE_LIST = ['(0-2)', '(4-6)', '(8-12)', '(15-20)',
             '(25-32)', '(38-43)', '(48-53)', '(60-100)']
 
 GENDER_LIST = ['Male', 'Female']
 
-# ---------------- INPUT ----------------
-img_file = st.camera_input("Capture Image")
+# ---------------- CAMERA INPUT ----------------
+img_file = st.camera_input("📸 Capture Image")
 
 if img_file is not None:
 
+    # Convert image
     image = Image.open(img_file)
     frame = np.array(image)
 
     gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+
+    # Detect faces
     faces = face_cascade.detectMultiScale(gray, 1.1, 5)
 
     for (x, y, w, h) in faces:
@@ -61,6 +73,7 @@ if img_file is not None:
         except:
             label = "Unknown"
 
+        # Draw box + label
         cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
         cv2.putText(frame, label, (x, y-10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8,
