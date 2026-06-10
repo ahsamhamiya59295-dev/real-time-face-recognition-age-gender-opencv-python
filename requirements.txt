@@ -1,2 +1,4 @@
-opencv-contrib-python
+streamlit
+opencv-python-headless
 numpy
+pillow
