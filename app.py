@@ -1,71 +1,14 @@
-import streamlit as st
+import sys
+import os
 import cv2
 import numpy as np
-from PIL import Image
-import os
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PIL import Image, ImageQt
 
-# ---------------- PAGE CONFIG ----------------
-st.set_page_config(
-    page_title="Face AI Pro",
-    page_icon="🤖",
-    layout="centered"
-)
-
-# ---------------- CUSTOM CSS (STUNNING UI) ----------------
-st.markdown("""
-<style>
-    .main {
-        background-color: #0e1117;
-    }
-
-    h1 {
-        text-align: center;
-        color: #00ffe1;
-        font-size: 42px;
-        font-weight: 800;
-    }
-
-    .subtitle {
-        text-align: center;
-        color: #9aa4b2;
-        font-size: 16px;
-        margin-bottom: 25px;
-    }
-
-    .box {
-        background: linear-gradient(145deg, #111827, #0b1220);
-        padding: 20px;
-        border-radius: 15px;
-        border: 1px solid #1f2937;
-        box-shadow: 0 0 20px rgba(0,255,225,0.15);
-    }
-
-    .result {
-        font-size: 20px;
-        font-weight: bold;
-        color: #00ff9d;
-        text-align: center;
-        margin-top: 10px;
-    }
-
-    .footer {
-        text-align: center;
-        color: #6b7280;
-        font-size: 12px;
-        margin-top: 20px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- TITLE ----------------
-st.markdown("<h1>🤖 Face AI Pro System</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subtitle'>AI detects Face • Age • Gender in real time</p>", unsafe_allow_html=True)
-
-# ---------------- PATH SETUP ----------------
+# ---------------- MODEL PATH ----------------
 BASE_DIR = os.path.dirname(__file__)
 MODEL_DIR = os.path.join(BASE_DIR, "models")
 
-# ---------------- LOAD MODELS ----------------
 face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
@@ -80,62 +23,161 @@ gender_net = cv2.dnn.readNetFromCaffe(
     os.path.join(MODEL_DIR, "gender_net.caffemodel")
 )
 
-# ---------------- LABELS ----------------
 AGE_LIST = ['(0-2)', '(4-6)', '(8-12)', '(15-20)',
             '(25-32)', '(38-43)', '(48-53)', '(60-100)']
 
 GENDER_LIST = ['Male', 'Female']
 
-# ---------------- UI CARD ----------------
-st.markdown("<div class='box'>", unsafe_allow_html=True)
 
-img_file = st.camera_input("📸 Capture Image")
+# ---------------- UPLOAD WIDGET ----------------
+class UploadWidget(QtWidgets.QFrame):
+    image_dropped = QtCore.pyqtSignal(object)
 
-st.markdown("</div>", unsafe_allow_html=True)
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+        self.setFixedSize(360, 360)
 
-# ---------------- PROCESSING ----------------
-if img_file is not None:
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setAlignment(QtCore.Qt.AlignCenter)
 
-    image = Image.open(img_file)
-    frame = np.array(image)
+        self.icon = QtWidgets.QLabel("☁️")
+        self.icon.setAlignment(QtCore.Qt.AlignCenter)
+        self.icon.setFixedHeight(120)
+        layout.addWidget(self.icon)
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        self.title = QtWidgets.QLabel("Click or Drag & Drop Image")
+        self.title.setAlignment(QtCore.Qt.AlignCenter)
+        layout.addWidget(self.title)
 
-    faces = face_cascade.detectMultiScale(gray, 1.1, 5)
+        self.subtitle = QtWidgets.QLabel("JPG, PNG, WEBP supported")
+        self.subtitle.setAlignment(QtCore.Qt.AlignCenter)
+        layout.addWidget(self.subtitle)
 
-    for (x, y, w, h) in faces:
+        self.analyze_btn = QtWidgets.QPushButton("Analyze Face")
+        layout.addWidget(self.analyze_btn, alignment=QtCore.Qt.AlignCenter)
 
-        face = frame[y:y+h, x:x+w]
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.accept()
 
-        try:
-            blob = cv2.dnn.blobFromImage(
-                face, 1.0, (227, 227),
-                (78.4, 87.7, 114.9),
-                swapRB=False
-            )
+    def dropEvent(self, event):
+        path = event.mimeData().urls()[0].toLocalFile()
+        self.image_dropped.emit(path)
 
-            gender_net.setInput(blob)
-            gender = GENDER_LIST[gender_net.forward().argmax()]
 
-            age_net.setInput(blob)
-            age = AGE_LIST[age_net.forward().argmax()]
+# ---------------- IMAGE VIEW ----------------
+class ResultImageWidget(QtWidgets.QLabel):
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(320, 240)
 
-            label = f"{gender}, {age}"
+    def set_image(self, pil_image):
+        w, h = self.width(), self.height()
+        pil_image = pil_image.copy()
+        pil_image.thumbnail((w, h))
+        pix = QtGui.QPixmap.fromImage(ImageQt.ImageQt(pil_image))
+        self.setPixmap(pix)
 
-        except:
-            label = "Unknown"
 
-        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        cv2.putText(frame, label, (x, y-10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8,
-                    (0, 255, 0), 2)
+# ---------------- MAIN APP ----------------
+class MainWindow(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
 
-    st.image(frame, use_container_width=True)
+        self.setWindowTitle("FaceInsight AI")
+        self.setFixedSize(820, 460)
 
-    st.markdown(
-        f"<p class='result'>Faces detected: {len(faces)}</p>",
-        unsafe_allow_html=True
-    )
+        layout = QtWidgets.QHBoxLayout(self)
 
-# ---------------- FOOTER ----------------
-st.markdown("<p class='footer'>Powered by AI • Streamlit • OpenCV</p>", unsafe_allow_html=True)
+        # LEFT UI (YOUR DESIGN)
+        self.upload = UploadWidget()
+        layout.addWidget(self.upload)
+
+        # RIGHT PANEL
+        right = QtWidgets.QVBoxLayout()
+
+        self.result_image = ResultImageWidget()
+
+        self.age_label = QtWidgets.QLabel("Age: -")
+        self.gender_label = QtWidgets.QLabel("Gender: -")
+        self.face_label = QtWidgets.QLabel("Faces: -")
+
+        right.addWidget(self.result_image)
+        right.addWidget(self.age_label)
+        right.addWidget(self.gender_label)
+        right.addWidget(self.face_label)
+
+        layout.addLayout(right)
+
+        # DATA
+        self.image = None
+
+        # SIGNALS
+        self.upload.image_dropped.connect(self.load_image)
+        self.upload.analyze_btn.clicked.connect(self.analyze)
+
+    # ---------------- LOAD IMAGE ----------------
+    def load_image(self, path):
+        self.image = Image.open(path).convert("RGB")
+        self.result_image.set_image(self.image)
+
+    # ---------------- AI ANALYSIS ----------------
+    def analyze(self):
+
+        if self.image is None:
+            QtWidgets.QMessageBox.warning(self, "Error", "Please upload image first")
+            return
+
+        frame = np.array(self.image)
+        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+
+        faces = face_cascade.detectMultiScale(gray, 1.1, 5)
+
+        age_out = "-"
+        gender_out = "-"
+
+        for (x, y, w, h) in faces:
+
+            face = frame[y:y+h, x:x+w]
+
+            try:
+                blob = cv2.dnn.blobFromImage(
+                    face, 1.0, (227, 227),
+                    (78.4, 87.7, 114.9),
+                    swapRB=False
+                )
+
+                gender_net.setInput(blob)
+                gender_out = GENDER_LIST[gender_net.forward().argmax()]
+
+                age_net.setInput(blob)
+                age_out = AGE_LIST[age_net.forward().argmax()]
+
+                label = f"{gender_out}, {age_out}"
+
+            except:
+                label = "Unknown"
+
+            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+            cv2.putText(frame, label, (x, y-10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                        (0, 255, 0), 2)
+
+        # UPDATE UI
+        self.result_image.set_image(Image.fromarray(frame))
+        self.age_label.setText(f"Age: {age_out}")
+        self.gender_label.setText(f"Gender: {gender_out}")
+        self.face_label.setText(f"Faces: {len(faces)}")
+
+
+# ---------------- RUN ----------------
+def main():
+    app = QtWidgets.QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()
